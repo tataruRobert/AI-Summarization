@@ -73,3 +73,53 @@ class Parser:
             words = file.readlines()
 
         return [word.replace('\n', '') for word in words]
+
+    def getNounPositions(self, type, tagged, lineIn):
+        nounPosi = {}
+        for item in tagged:
+            if str(item[1]).startswith(type):
+                nounPosi[item[0]] = -1
+        for key in nounPosi.keys():
+            regExpression = r'\b' + key.lower() + r'\b'
+            nounsi = [m.start() for m in re.finditer(regExpression, lineIn.lower())]
+            nounPosi[key] = nounsi
+        return nounPosi
+
+    def pronounReplaceWithNearNoun(self, lineIn, PRP, NNP):
+        replacePRP = []
+        for key in PRP.keys():
+            for pos in PRP[key]:
+                print('---------', key, '------', pos, '-----')
+                nearNoun = self.getNearestPreviousNoun(NNP, pos, lineIn)
+                replacePRP.append((key, pos, nearNoun))
+
+        replacePRP = sorted(replacePRP, key=lambda x: (-x[1], x[0], x[2]))
+
+        lineInReplacePronn = lineIn
+        for prpRep in replacePRP:
+            lineInReplacePronn = lineInReplacePronn[:prpRep[1]] + prpRep[2] + lineInReplacePronn[
+                                                                              prpRep[1] + len(prpRep[0]):]
+        return lineInReplacePronn
+
+    def getNearestPreviousNoun(self, NNP, posiOfPronoun, lineIn):
+        minimumDiff = len(lineIn)
+        nearKey = ''
+        for keyNNP in NNP.keys():
+            for posNoun in NNP[keyNNP]:
+                if (posiOfPronoun > posNoun):
+                    if (minimumDiff > (posiOfPronoun - posNoun)):
+                        minimumDiff = posiOfPronoun - posNoun
+                        nearKey = keyNNP
+        return nearKey
+
+    def getProNounPositions(self, tagged, lineIn):
+        proNounPosi = {}
+        for item in tagged:
+            if str(item[1]).startswith("P"):
+                proNounPosi[item[0].lower()] = -1
+
+        for key in proNounPosi.keys():
+            regExpression = r'\b' + key.lower() + r'\b'
+            pronounsi = [m.start() for m in re.finditer(regExpression, lineIn.lower())]
+            proNounPosi[key] = pronounsi
+        return proNounPosi
